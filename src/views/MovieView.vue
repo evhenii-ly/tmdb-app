@@ -69,28 +69,11 @@ import CountryFlagSvg from 'country-list-with-dial-code-and-flag/dist/flag-svg'
 
 const movie = ref({});
 const isMovieFetched = ref(false);
-const getMovieById = async (id: number) => {
-  if (isMovieFetched.value) {
-    return;
-  }
-
-  const options = {
-    method: 'GET',
-    headers: {
-      accept: 'application/json',
-      Authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0MjA3YzA0MDRiNjdmZWIxMGQxMmNiMzFkOWE3Zjk2MCIsIm5iZiI6MTczNzAzMDY5Ni4yODYsInN1YiI6IjY3ODhmYzI4NzljZjEzZWU0MWFkMjZmMiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.89ZYdULE-DqIfQMrKz_8BpZPQhA0cXzvHKxHowWLcVY'
-    }
-  };
-
-  const response = await fetch(`https://api.themoviedb.org/3/movie/${id}?language=en-US`, options);
-
-  movie.value = await response.json()
-  isMovieFetched.value = true;
-}
 
 onMounted(() => {
   const id = Number(window.location.pathname.split("/")[2]);
 
-  getMovieById(id);
+
+  // getMovieById(id);
 })
 </script>

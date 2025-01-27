@@ -53,7 +53,7 @@
 
   <MovieVideos v-model:visible="isMovieVideosModalVisible" />
   <SimilarMovies v-model:visible="isSimilarMoviesModalVisible" />
-  <AiLoader :visible="isAiLoaderVisible" :text="aiLoaderText" :closing="isAiLoaderClosing" />
+  <AiLoader :visible="isAiLoaderVisible" :text="aiLoaderText" />
 </template>
 
 <style lang="scss">
@@ -258,7 +258,6 @@ const releaseYear = ref<number|NA>('N/A')
 const isMovieVideosModalVisible = ref(false)
 const isSimilarMoviesModalVisible = ref(false)
 const isAiLoaderVisible = ref(false)
-const isAiLoaderClosing = ref(false)
 const aiLoaderText = ref('')
 
 const fillGenreList = async () => {
@@ -281,6 +280,7 @@ const findMovieLinks = () => {
   isAiLoaderVisible.value = true
   aiLoaderText.value = 'Looking for the best matches...'
 
+  return
   sendMessageToGemini('similar_movies', store.activeSlideData.title, store.activeSlideData.release_date).then((aiModelResponse) => {
     const imdbIds: string[] = aiModelResponse.map((el) => el.imdb_link.replace(/\/$/, '').split('/').pop() as string)
 
@@ -310,11 +310,8 @@ const findMovieLinks = () => {
         aiLoaderText.value = 'Enjoy!'
 
         setTimeout(() => {
-          isAiLoaderClosing.value = true
-
           setTimeout(() => {
             isAiLoaderVisible.value = false
-            isAiLoaderClosing.value = false
           }, 1000)
         }, 2000)
       })
