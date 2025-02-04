@@ -1,5 +1,5 @@
 <template>
-  <Carousel v-bind="carouselConfig" @slide-start="handleSlideStart">
+  <Carousel v-bind="carouselConfig" ref="carousel" @slide-end="handleSlideEnd">
     <Slide v-for="slide in items" :key="slide">
       <div class="carousel__item">
         <img class="carousel__item-image"
@@ -27,6 +27,7 @@
   display: flex;
   flex-direction: column-reverse;
   margin-top: auto;
+  user-select: none;
 
   &__navigation {
     display: flex;
@@ -84,20 +85,20 @@
 </style>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-
-const props = defineProps({
-  items: {
-    type: Object,
-    required: true,
-  },
-});
-
+import { onMounted, ref } from 'vue'
 import 'vue3-carousel/carousel.css'
 import { Carousel, Slide, Navigation } from 'vue3-carousel'
-import { store } from '@/stores/store'
+import { useAppStore } from '@/stores/app'
 import IconArrowLeft from '@/components/icons/IconArrowLeft.vue'
 import IconArrowRight from '@/components/icons/IconArrowRight.vue'
+import type { TMDBMovie } from '@/types'
+
+const props = defineProps<{
+  items: TMDBMovie[] | null
+}>();
+
+const appStore = useAppStore()
+const carousel = ref(null)
 
 const carouselConfig = {
   gap: 32,
@@ -105,12 +106,15 @@ const carouselConfig = {
   wrapAround: true,
 }
 
-const handleSlideStart = (data: any) => {
-  store.activeSlideData = props.items[data.slidingToIndex];
+const handleSlideEnd = (data: any) => {
+  // update slide data
+  appStore.activeMovie.data = props.items[data.currentSlideIndex];
 }
 
 onMounted(() => {
-  store.activeSlideData = props.items[0];
+  // set initial slide data
+  appStore.activeMovie.data = props.items[carousel.value?.data.currentSlide];
+  appStore.activeMovie.isLoading = false
 })
 
 </script>

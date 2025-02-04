@@ -3,12 +3,17 @@ import './assets/main.scss'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 
 import App from './App.vue'
 import router from './router'
 import PrimeVue from 'primevue/config';
 import Aura from '@primevue/themes/aura';
+import ToastService from 'primevue/toastservice';
 import { definePreset } from '@primevue/themes'
+import 'lazysizes'
+import 'lazysizes/plugins/attrchange/ls.attrchange'
+import i18n from '@/locales'
 
 const app = createApp(App)
 
@@ -38,12 +43,17 @@ const CustomPreset = definePreset(Aura, {
   },
 });
 
-app.use(createPinia())
+const pinia = createPinia()
+pinia.use(piniaPluginPersistedstate)
+
+app.use(pinia)
 app.use(router)
 app.use(PrimeVue, {
   theme: {
     preset: CustomPreset,
   }
-});
+})
+app.use(ToastService);
+app.use(i18n)
 
 app.mount('#app')

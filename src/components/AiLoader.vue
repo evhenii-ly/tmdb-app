@@ -1,6 +1,6 @@
 <template>
   <div class="ai" ref="aiLoader">
-    <span class="ai__text" ref="aiLoaderText">{{ aiText }}</span>
+    <span class="ai__text" ref="aiLoaderText">{{ animatedText }}</span>
     <IconAILoader ref="aiLoaderIcon" />
   </div>
 </template>
@@ -145,33 +145,38 @@ import IconAILoader from '@/components/icons/IconAILoader.vue'
 import type { AiLoader } from '@/types'
 import { gsap } from 'gsap'
 import { TextPlugin } from 'gsap/TextPlugin'
+import { useAppStore } from '@/stores/app.ts'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<AiLoader>()
 
-const aiText = computed(() => props.text)
+const { t } = useI18n()
+const appStore = useAppStore()
 const aiLoader = ref<HTMLElement | null>(null)
 const aiLoaderIcon = ref<InstanceType<typeof IconAILoader> | null>(null)
 const aiLoaderText = ref<HTMLElement | null>(null)
+const animatedText = ref<string>(t('loader.looking'))
 
 gsap.registerPlugin(TextPlugin)
 
 const showAILoader = (): void => {
-  const timeline = gsap.timeline();
+  const timeline = gsap.timeline()
 
   gsap.to(aiLoader.value, { opacity: 1 })
-  gsap.fromTo(aiLoaderIcon.value?.$el,
-    { opacity: 0, },
-    { opacity: 1, duration: 2, delay: 1 })
-  timeline.fromTo(aiLoaderText.value,
+  gsap.fromTo(aiLoaderIcon.value?.$el, { opacity: 0 }, { opacity: 1, duration: 2, delay: 1 })
+  timeline.fromTo(
+    aiLoaderText.value,
     { scale: 1.4, translateY: -60, opacity: 0 },
-    { scale: 1, translateY: 0, opacity: 1, duration: 1.5, delay: 2 }
+    { scale: 1, translateY: 0, opacity: 1, duration: 1.5, delay: 2 },
   )
+}
 
-  timeline.to(aiLoaderText.value,
-    { text: { value: '', speed: 1, rtl: true }, delay: 1, duration: 2 }
-  ).to(aiLoaderText.value,
-    { text: { value: 'New text', speed: 1 }, delay: 1 }
-  )
+const updateAILoaderText = (text: string) => {
+  const timeline = gsap.timeline()
+
+  timeline
+    .to(aiLoaderText.value, { text: { value: '', speed: 1, rtl: true }, delay: 0.5, duration: 1 })
+    .to(aiLoaderText.value, { text: { value: text, speed: 1 }, delay: 0.5 })
 }
 
 const hideAILoader = (): void => {
@@ -188,7 +193,6 @@ const hideAILoader = (): void => {
 //     }, 1000)
 //   }
 // })
-
 watch(
   () => props.visible,
   (newVisibleValue) => {
@@ -199,6 +203,14 @@ watch(
     } else {
       hideAILoader()
     }
+  },
+)
+
+watch(
+  () => appStore.aiLoaderText,
+  (newValue) => {
+    console.log(newValue, 'newValue')
+      updateAILoaderText(newValue)
   },
 )
 </script>

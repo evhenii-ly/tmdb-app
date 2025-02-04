@@ -213,7 +213,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Button } from 'primevue'
-import { useSpotify } from '@/composables/useSpotify'
+import { useSpotify } from '@/composables/api/useSpotify'
 import { store } from '@/stores/store'
 
 const { getAccessToken } = useSpotify()

@@ -15,15 +15,15 @@
             </a>
           </router-link>
           <a v-else-if="!item.image" class="flex items-center p-4 cursor-pointer mb-2 gap-3">
-          <span
-            class="inline-flex items-center justify-center rounded-full bg-primary text-primary-contrast w-12 h-12"
-          >
-            <i :class="[item.icon, 'text-lg']"></i>
-          </span>
+            <span
+              class="inline-flex items-center justify-center rounded-full bg-primary text-primary-contrast w-12 h-12"
+            >
+              <i :class="[item.icon, 'text-lg']"></i>
+            </span>
             <span class="inline-flex flex-col gap-1">
-            <span class="font-bold text-lg">{{ item.label }}</span>
-            <span class="whitespace-nowrap">{{ item.subtext }}</span>
-          </span>
+              <span class="font-bold text-lg">{{ item.label }}</span>
+              <span class="whitespace-nowrap">{{ item.subtext }}</span>
+            </span>
           </a>
           <div v-else class="flex flex-col items-start gap-4 p-2">
             <img alt="" :src="item.image" class="w-full" />
@@ -36,6 +36,9 @@
             image="https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png"
             shape="circle"
           />
+
+          <Button variant="text" @click="changeLanguage('en')">EN</Button>
+          <Button variant="text" @click="changeLanguage('ua')">UA</Button>
         </template>
       </MegaMenu>
     </div>
@@ -63,22 +66,23 @@
 
 <script setup lang="ts">
 import { MegaMenu, Button, Avatar } from 'primevue'
-import { ref } from 'vue'
-import type { Ref } from 'vue'
+import { computed } from 'vue'
 import IconLogo from '@/components/icons/IconLogo.vue'
 import type { MenuItem } from 'primevue/menuitem'
+import { useI18n } from 'vue-i18n'
 
-const menuItems: Ref<MenuItem[]> = ref([
+const { locale, t } = useI18n({ useScope: 'global' })
+const menuItems = computed<MenuItem[]>(() => [
   {
-    label: 'Popular',
+    label: t('header.nav.popular'),
     root: true,
   },
   {
-    label: 'New',
+    label: t('header.nav.new'),
     root: true,
   },
   {
-    label: 'Genre',
+    label: t('header.nav.genre'),
     root: true,
     items: [
       [
@@ -122,13 +126,17 @@ const menuItems: Ref<MenuItem[]> = ref([
     ],
   },
   {
-    label: 'Movie',
+    label: t('header.nav.movie'),
     root: true,
-    route: 'movies'
+    route: 'movies',
   },
   {
-    label: 'TV Series',
+    label: t('header.nav.series'),
     root: true,
   },
 ])
+
+const changeLanguage = (lang: string) => {
+  locale.value = lang
+}
 </script>

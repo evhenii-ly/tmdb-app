@@ -1,27 +1,39 @@
 <template>
-  <div v-if="store.activeSlideData" class="container movie-info">
-    <h1 class="movie-info__title">{{ store.activeSlideData.title }}</h1>
+  <Skeleton
+    v-if="appStore.activeMovie.isLoading"
+    width="470px"
+    height="4rem"
+    borderRadius="16px"
+  ></Skeleton>
+  <div v-else class="container movie-info">
+    <h1 class="movie-info__title">{{ appStore.activeMovie.data?.title }}</h1>
     <div class="movie-info__content">
       <div class="movie-info__details">
         <div class="movie-info__imdb">
           <IconImdb />
 
           <span class="movie-info__imdb-average">{{ voteAverageRounded() }}&nbsp;</span>
-          <span class="movie-info__imdb-count">({{ store.activeSlideData.vote_count }})</span>
+          <span class="movie-info__imdb-count">({{ appStore.activeMovie.data?.vote_count }})</span>
         </div>
-        <div class="movie-info__year movie-info__item">{{ releaseYear }}</div>
+        <div class="movie-info__year movie-info__item">{{ getReleaseYearFromDate() }}</div>
         <div class="movie-info__genres">
-          <template v-if="filledGenreList">
-            <span v-for="(genre, index) in filledGenreList" :key="genre">
-              {{ genre.name }}<template v-if="index < filledGenreList.length - 1">,&nbsp;</template>
+          <template v-if="!appStore.genres.isLoading">
+            <span v-for="(genre, index) in appStore.genres.data?.genres" :key="genre">
+              {{ genre.name
+              }}<template
+                v-if="
+                  appStore.genres.data?.genres && index < appStore.genres.data.genres.length - 1
+                "
+                >,&nbsp;</template
+              >
             </span>
           </template>
         </div>
       </div>
       <p class="movie-info__description">
-        {{ overviewShort }}
+        {{ getOverviewShort() }}
         <RouterLink
-          :to="`/movie/${store.activeSlideData.id}`"
+          :to="`/movie/${appStore.activeMovie.data?.id}`"
           v-bind="{ 'data-text': 'See more' }"
           >See more
         </RouterLink>
@@ -31,15 +43,13 @@
         <Button variant="outlined" severity="secondary" @click="isMovieVideosModalVisible = true">
           Watch trailer
         </Button>
-        <Button @click="getOST">
-          Watch now
-        </Button>
+        <Button @click="getOST"> Watch now </Button>
 
         <Button
           variant="outlined"
           severity="secondary"
           class="movie-info__similar"
-          @click="findMovieLinks"
+          @click="handleFindSimilarMovies"
         >
           <IconMagicWand />
           Similar with AI
@@ -47,13 +57,12 @@
       </div>
     </div>
   </div>
-  <Skeleton v-else width="470px" height="4rem" borderRadius="16px"></Skeleton>
 
   <SpotifyPlayer />
 
   <MovieVideos v-model:visible="isMovieVideosModalVisible" />
   <SimilarMovies v-model:visible="isSimilarMoviesModalVisible" />
-  <AiLoader :visible="isAiLoaderVisible" :text="aiLoaderText" />
+  <AiLoader :visible="isAiLoaderVisible" :text="appStore.aiLoaderText" />
 </template>
 
 <style lang="scss">
@@ -223,104 +232,109 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { Button, Skeleton } from 'primevue'
-import { store } from '@/stores/store'
 import IconImdb from '@/components/icons/IconImdb.vue'
 import IconMagicWand from '@/components/icons/IconMagicWand.vue'
-import { useMovies } from '@/composables/useMovies'
-import { useGemini } from '@/composables/useGemini'
-import { useSpotify } from '@/composables/useSpotify'
+import { useGemini } from '@/composables/api/useGemini'
+import { useSpotify } from '@/composables/api/useSpotify'
 import MovieVideos from '@/components/MovieVideos.vue'
 import SimilarMovies from '@/components/SimilarMovies.vue'
 import AiLoader from '@/components/AiLoader.vue'
 import SpotifyPlayer from '@/components/SpotifyPlayer.vue'
 import type { TMDBMovieByExternalId } from '@/types'
+import { useAppStore } from '@/stores/app'
+import { useI18n } from 'vue-i18n'
+import { useMovies } from '@/composables/api/useMovies.ts'
 
-const { fetchGenres, findVideoByImdbId } = useMovies()
+const { findVideoByImdbId } = useMovies()
 const { sendMessageToGemini } = useGemini()
 const { searchTrackByName } = useSpotify()
+const appStore = useAppStore()
 
-const getReleaseYearFromDate = (): number|NA =>
-  store.activeSlideData.release_date
-    ? new Date(store.activeSlideData.release_date).getFullYear()
+const getReleaseYearFromDate = (): number | NA =>
+  appStore.activeMovie.data?.release_date
+    ? new Date(appStore.activeMovie.data.release_date).getFullYear()
     : 'N/A'
 
 const getOverviewShort = (): string => {
-  return store.activeSlideData.overview.length > 170
-    ? store.activeSlideData.overview.slice(0, 170).trim() + '...'
-    : store.activeSlideData.overview
+  const overview = appStore.activeMovie.data?.overview || ''
+
+  return overview.length > 170 ? overview.slice(0, 170).trim() + '...' : overview
 }
 
-const voteAverageRounded = () => Number(store.activeSlideData.vote_average).toFixed(1)
+const voteAverageRounded = (): string => Number(appStore.activeMovie.data?.vote_average).toFixed(1)
 
-const filledGenreList = ref<Genre[]>([])
-const overviewShort = ref('')
-const releaseYear = ref<number|NA>('N/A')
+const { t } = useI18n()
 const isMovieVideosModalVisible = ref(false)
 const isSimilarMoviesModalVisible = ref(false)
 const isAiLoaderVisible = ref(false)
-const aiLoaderText = ref('')
 
-const fillGenreList = async () => {
-  await fetchGenres()
+const handleFindSimilarMovies = async () => {
+  // check if movie id is existing
+  const hasSameMovie = appStore.activeMovieSimilar.data?.find((el) => el.id === appStore.activeMovie.data?.id)
 
-  watch(
-    () => store.activeSlideData,
-    (newValue) => {
-      const genreIdsArray = Object.values(newValue.genre_ids)
+  // if exists then display modal
+  // if not then save to store
+  if (hasSameMovie) {
+    isSimilarMoviesModalVisible.value = true
+  } else {
+    isAiLoaderVisible.value = true
 
-      filledGenreList.value = store.genres.genres.filter((value) => genreIdsArray.includes(value.id))
-    },
-    { immediate: true },
-  )
-}
+    // getting similar movies from gemini
+    const similarMoviesArray = await sendMessageToGemini(
+      'similar_movies',
+      appStore.activeMovie.data?.title || '',
+      appStore.activeMovie.data?.release_date || '',
+    )
 
-const findMovieLinks = () => {
-  console.log('getting...')
+    // forming an array of imdb ids
+    const imdbIds: string[] = similarMoviesArray.map(
+      (el) => el.imdb_link.replace(/\/$/, '').split('/').pop() as string,
+    )
 
-  isAiLoaderVisible.value = true
-  aiLoaderText.value = 'Looking for the best matches...'
+    appStore.aiLoaderText = t('loader.popcorn')
+    const similarMovies = await getSimilarMovies(imdbIds)
 
-  return
-  sendMessageToGemini('similar_movies', store.activeSlideData.title, store.activeSlideData.release_date).then((aiModelResponse) => {
-    const imdbIds: string[] = aiModelResponse.map((el) => el.imdb_link.replace(/\/$/, '').split('/').pop() as string)
+    appStore.$patch((state) => {
+      state.activeMovieSimilar.data.push({
+        id: state.activeMovie.data.id,
+        data: similarMovies,
+      })
+    })
 
-    const getSimilarMovies = async () => {
-      const similarMovies: TMDBMovieByExternalId[] = []
-
-      for (const imdbId of imdbIds) {
-        const foundMovie = await findVideoByImdbId(imdbId)
-        const movieList = foundMovie.movie_results
-
-        if (movieList.length) {
-          similarMovies.push(movieList[0])
-        }
-      }
-
-      return similarMovies
-    }
-
-    aiLoaderText.value = 'Making popcorn'
+    isSimilarMoviesModalVisible.value = true
 
     setTimeout(() => {
-      getSimilarMovies().then((res) => {
-        console.log(res, 'res')
+      appStore.aiLoaderText = t('loader.enjoy')
 
-        store.similarMovies = res
-        isSimilarMoviesModalVisible.value = true
-        aiLoaderText.value = 'Enjoy!'
+      setTimeout(() => {
+        isAiLoaderVisible.value = false
+      }, 3500)
+    }, 2500)
+  }
+}
 
-        setTimeout(() => {
-          setTimeout(() => {
-            isAiLoaderVisible.value = false
-          }, 1000)
-        }, 2000)
-      })
-    }, 2000)
-  })
+const getSimilarMovies = async (imdbIds: string[]): Promise<TMDBMovieByExternalId[]> => {
+  const similarMovies: TMDBMovieByExternalId[] = []
+
+  for (const imdbId of imdbIds) {
+    const foundMovie = await findVideoByImdbId(imdbId)
+    const movieList = foundMovie.movie_results
+
+    if (movieList.length) {
+      similarMovies.push(movieList[0])
+    }
+  }
+
+  return similarMovies
 }
 
 const getOST = () => {
-  sendMessageToGemini('movie_ost', store.activeSlideData.title, store.activeSlideData.release_date).then((aiModelResponse) => {
+  return
+  sendMessageToGemini(
+    'movie_ost',
+    store.activeSlideData.title,
+    store.activeSlideData.release_date,
+  ).then((aiModelResponse) => {
     for (const track of aiModelResponse) {
       searchTrackByName(`${track.track_name}`).then((spotifyResponse) => {
         store.activeMovieOST.push({
@@ -334,14 +348,13 @@ const getOST = () => {
 }
 
 watch(
-  () => store.activeSlideData,
+  () => appStore.activeMovie.data?.genre_ids,
   () => {
-    overviewShort.value = getOverviewShort()
-    releaseYear.value = getReleaseYearFromDate()
+    appStore.getActiveMovieGenres()
   },
 )
 
 onMounted(() => {
-  fillGenreList()
+  appStore.getActiveMovieGenres()
 })
 </script>

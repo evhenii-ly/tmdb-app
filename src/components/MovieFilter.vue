@@ -8,7 +8,7 @@
 import { InputText } from 'primevue'
 import { debounce } from '@/shared'
 import { store } from '@/stores/store'
-import { useMovies } from '@/composables/useMovies'
+import { useMovies } from '@/composables/api/useMovies'
 const { fetchMovies } = useMovies()
 import { type Ref, ref } from 'vue'
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'

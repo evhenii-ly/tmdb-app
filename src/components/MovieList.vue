@@ -36,7 +36,7 @@
 <script setup lang="ts">
 import { Paginator } from 'primevue'
 import MovieCard from '@/components/MovieCard.vue'
-import { useMovies } from '@/composables/useMovies'
+import { useMovies } from '@/composables/api/useMovies'
 import { store } from '@/stores/store'
 import { onMounted } from 'vue'
 
